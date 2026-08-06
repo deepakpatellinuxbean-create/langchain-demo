@@ -42,7 +42,7 @@ length_input = st.selectbox(
 )
 
 
-# create a dynamic prompt using prompt template with the file
+# create a single dynamic prompt using prompt template with the file
 template = PromptTemplate(
     template = """
 Please summarize the research paper titled "{paper_input}" with the following specifications:
