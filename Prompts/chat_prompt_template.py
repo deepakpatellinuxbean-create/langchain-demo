@@ -2,7 +2,7 @@
 
 from langchain_core.prompts import ChatPromptTemplate
 
-# jab ChatPromptTemplate ke through dynamic prompt generate krte hai tab hame AIMessage, SystemMessage, HumanMessage ka use nahi karte instead hum tuple ka use krte hai below is an example of that
+# jab ChatPromptTemplate ke through dynamic prompt generate krte hai tab hame AIMessage, SystemMessage, HumanMessage classes ka use nahi karte instead hum tuple ka use krte hai below is an example of that
 # create a multiple dynamic prompt using ChatPromptTemplate
 chat_template = ChatPromptTemplate([
     ("system", "You are a helpful {domain} expert"), # this is equal to SystemMessage class

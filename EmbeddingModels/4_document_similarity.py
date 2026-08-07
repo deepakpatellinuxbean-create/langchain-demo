@@ -20,12 +20,12 @@ query = "tell me about virat kohli"
 doc_embeddings = embedding.embed_documents(documents)
 query_embeddings = embedding.embed_query(query)
 
-# always pass query embedding into a list i.e 2 dimension list
+# make sure pass params in a list i.e 2 dimension list
 matched = cosine_similarity([query_embeddings], doc_embeddings)
 scores = matched[0]
 
 index, score = sorted(list(enumerate(scores)), key=lambda x:x[1])[-1]
 
 print(query)
-print(documents(index))
+print(documents[index]) 
 print("similartiy score is:", score)

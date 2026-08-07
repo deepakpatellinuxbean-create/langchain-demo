@@ -57,7 +57,7 @@ Flow:
 Important: har LLM structured output return nahi karta hai srf kuch models hi support karte hai jaise OpenAI GPT, Gemini, Claude ke supported models.
 
 LLM model jo native structured output support nahi karte hai to unke case me hume:
-  - output parsers
+  - output parsers (most common)
   - prompt engineering
   - regex / manual JSON parsing
   use karna padta hai structured output ke liye.
@@ -209,10 +209,8 @@ Example:
   }
 
 Phir:
-
   structured_model = model.with_structured_output(json_schema)
   result = structured_model.invoke(review_text)
-
 
 Important point:
   JSON Schema sirf rules define karta hai.

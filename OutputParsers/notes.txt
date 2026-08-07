@@ -1,0 +1,26 @@
+LANGCHAIN - OUTPUT PARSER
+=============================
+
+Jo LLMs natively structured output support nahi karte, unse structured data lene ke liye Output Parsers use karte hain.
+Parser LLM ke raw response (usually AIMessage/string) ko desired format me convert / extract kar deta hai.
+
+LANGCHAIN me kai output parsers hain; commonly ye 4 use hote hain:
+
+1. StrOutputParser (string)
+   - LLM ka response AIMessage hota hai; ye usme se plain string (.content) nikalta hai.
+   - Jab sirf text chahiye, ya chain me next step ko string input dena ho — tab use karo.
+   - Koi schema / structure enforce nahi karta.
+
+2. JsonOutputParser (json)
+   - LLM se JSON expect karta hai aur use Python dict me parse karta hai.
+   - Format instructions prompt me bhej sakte ho, lekin fields / schema enforce nahi hota —
+     LLM apne hisaab se response me keys bhej sakta hai.
+
+3. StructuredOutputParser (structured)
+   - ResponseSchema se desired fields (names + descriptions) define karke schema structure enforce karta hai.
+   - Output roughly wahi keys return karta hai jo tumne schema me di hain.
+   - Limitation: data type validation nahi hoti — agar field int chahiye aur LLM string bhej de, parser usko reject / convert nahi karega balki wrong reponse ko parse kr dega.
+
+4. PydanticOutputParser (pydantic)
+   - Pydantic model se schema + data validation dono milte hain (types, constraints jaise gt=18, etc.).
+   - Sabse strict / reliable jab typed, validated structured output chahiye.
