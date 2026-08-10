@@ -27,7 +27,6 @@ class Feedback(BaseModel):
 parser1 = StrOutputParser()
 parser2 = PydanticOutputParser(pydantic_object=Feedback)
 
-
 # Hume ensure karna hai ki LLM ka output sirf "positive" ya "negative" ho.
 # Isliye hum PydanticOutputParser ka use kar rahe hain.
 # PydanticOutputParser LLM ke output ko defined Pydantic structure

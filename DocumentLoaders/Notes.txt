@@ -1,0 +1,46 @@
+document loader:
+ye kisi bhi type ke document ko load krte hai.
+document loader hamesa list return karte hai and list ke andar document object hota hai jike andar file ka conrtent and metadata like page number etc details hoti hai.
+
+1) TextLoader: text file ko load krta hai
+2) PyPDFLoader: pdf files ko load krta hai and har page ke liye ek alag document object banata hai for e.g yadi pdf file me 20 pages hai to loader.load() list return krega and is list ke andar 20 document objects honge each representing one single page. har ek document object me page_content and metadata hoga  
+limitations: ye srf normal pdf read krta hai jiske andar text ho yadi complex pdf hai jiske andar images ke screenshot hai yaa scanned pages hai to it can't read it can only read textual pdf.
+| Use Case                       | Recommended Loader                                   |
+| ------------------------------ | ---------------------------------------------------- |
+| Simple, clean PDFs             | `PyPDFLoader`                                        |
+| PDFs with tables/columns       | `PDFPlumberLoader`                                   |
+| Scanned/image PDFs             | `UnstructuredPDFLoader` or `AmazonTextractPDFLoader` |
+| Need layout and image data     | `PyMuPDFLoader`                                      |
+| Want best structure extraction | `UnstructuredPDFLoader`                              |
+These are PDF loaders commonly used to extract text and other information from PDF files, especially in document-processing or RAG applications.
+
+PyPDFLoader → Best for simple, text-based PDFs. It extracts the text from each page with relatively little processing.
+PDFPlumberLoader → Better when the PDF contains tables, columns, or structured text. It is useful when preserving table/column information matters.
+UnstructuredPDFLoader → Designed for more complex PDFs, including documents containing images, scanned pages, tables, headings, and other structures. It generally provides better document structure extraction.
+AmazonTextractPDFLoader → Useful for scanned/image PDFs because it can use Amazon Textract's OCR capabilities to recognize text from images.
+PyMuPDFLoader → Useful when you need layout information and images in addition to ordinary text. PyMuPDF is also known for fast PDF processing.
+
+3) DirectoryLoader: yadi hume pure folder hi load karwana ho jiske andar multiple files hai to us case me DirectoryLoader use kia jata hai
+# yadi hume pure folder hi load karwana ho jiske andar multiple files hai to us case me DirectoryLoader use kia jata hai
+glob="*.pdf", #isme batana padta hai ki konsi files hum load krna chahta hai via passing a pattern current pattern says ki tum saari pdf file load kro jo ki pdf_files_directory ke andar hai we do have other patterns as well for e.g. "**/*.txt": Find every .txt file, including files inside all subfolders., "*.pdf": Find .pdf files only in the current/root directory, "data/*.csv": Find .csv files specifically inside the data/ folder, "**/*": Find every file of every type, including files in all subfolders
+docs = loader.load() # saari pdf ke saare pages docs me list me aa jayenge if teeno pdf ke total pages 15 honge to total 15 document object in a list load ho jayenge 
+
+docs = loader.load() ek sath multiple docs ko ek baar me load krta hai which consumes a lot of time and memory to is chiz se bachne ke liye hum DirectoryLoader me usually lazy_load() use krte hai instead load.
+
+lazy_load() :-> doesn't return a list of documents objects at once or process entire document at once instead it returms a generator. generator ki madad se hum 1 baar me srf 1 document object memory me load hota hai which saves time and memory both. 
+
+
+## WebBaseLoader
+
+**WebBaseLoader** is a document loader in LangChain used to load and extract text content from **web pages (URLs)**.
+
+It uses **BeautifulSoup** under the hood to parse HTML and extract visible text.
+
+### When to Use:
+
+* For **blogs, news articles, or public websites** where the content is primarily **text-based and static**.
+
+### Limitations:
+
+* Doesn’t handle **JavaScript-heavy pages** well (use `SeleniumURLLoader` for that).
+* Loads only **static content** — what's in the HTML, not what loads after the page renders.

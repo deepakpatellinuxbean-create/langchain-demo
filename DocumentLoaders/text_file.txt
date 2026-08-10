@@ -1,0 +1,3 @@
+Hello, this is a sample text file for testing LangChain document loaders.
+LangChain makes it easy to ingest text, PDF, and other documents for retrieval-augmented generation (RAG) applications.
+This is the third line of the text file.

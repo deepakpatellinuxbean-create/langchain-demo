@@ -3,8 +3,8 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnableParallel
 # RunnableParallel use hota hai jab hume 2 chains ko parallel run karna hota hai.
+from langchain_core.runnables import RunnableParallel
 
 load_dotenv()
 
