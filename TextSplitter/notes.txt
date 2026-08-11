@@ -1,0 +1,242 @@
+================================================================================
+TEXT SPLITTING — NOTES
+================================================================================
+
+Text Splitting kya hai?
+  Document / article / PDF / text ko chhote-chhote pieces (chunks) me todna,
+  taaki easy handling ho sake aur LLM / embeddings properly kaam kar saken.
+
+
+--------------------------------------------------------------------------------
+KYUN ZAROORI HAI? (Benefits)
+--------------------------------------------------------------------------------
+
+1) Context Length:
+   Har model ki ek limited context length hoti hai.
+   Agar pura document ek sath bhejoge, to model allow nahi karega / truncate ho jayega.
+   Isliye pehle chhote chunks banate hain.
+
+2) Downstream tasks better hoti hain:
+
+   Embedding:
+     Chhote focused chunks → zyada accurate vectors.
+     Pura mixed doc ek embedding me dabane se meaning blur ho jati hai.
+
+   Semantic Search:
+     Search result focused chunk pe point karta hai, pura irrelevant noise nahi.
+     Example: query "IPL" → sirf cricket wala chunk mile, farming/terrorism nahi.
+
+   Summarization:
+     Chhote chunks se topic drift / hallucination kam hoti hai.
+     Model ek clear portion pe focus karta hai.
+
+3) Computational resources:
+   Chhote chunks memory-efficient hote hain.
+   Parallel processing bhi asaan hoti hai.
+
+
+--------------------------------------------------------------------------------
+CHUNKING KE 4 TARIKE
+--------------------------------------------------------------------------------
+
+1) Length Based              → CharacterTextSplitter
+2) Text Structure Based      → RecursiveCharacterTextSplitter  (sabse zyada use)
+3) Document Structure Based  → RecursiveCharacterTextSplitter.from_language(...)
+4) Semantic Meaning Based    → SemanticChunker (langchain_experimental)
+
+
+================================================================================
+1) LENGTH BASED (CharacterTextSplitter)
+   File: length_based.py
+================================================================================
+
+Kya hai?
+  Sirf CHUNK SIZE (characters ki count) decide karte ho.
+  Example: chunk_size=100 → har chunk me ~100 characters.
+
+Kaise kaam karta hai?
+  Text ko character count ke hisaab se tod deta hai.
+  separator="" → hard cut (characters pe, Agar separator="\n" diya to pehle newline par todne ki koshish karega.)
+
+Important params:
+  chunk_size     → ek chunk me max kitne characters
+  chunk_overlap  → next chunk me previous ke kitne chars repeat
+  separator      → kis jagah todne ki koshish ("" = character cut)
+
+Problem / Limitation:
+  Context preserve NAHI hota.
+  Text KAHI SE BHI break ho sakta hai — even word ke beech se.
+  Example: "beautiful" → "beau" | "tiful"
+  Sentence / paragraph ka sense toot sakta hai.
+
+Kab use karein?
+  Simple demos, exact character-size control, ya structure matter nahi karti.
+
+Production tip:
+  Aksar RecursiveCharacterTextSplitter prefer kiya jata hai.
+
+
+================================================================================
+2) TEXT STRUCTURE BASED (RecursiveCharacterTextSplitter)
+   File: text_structure_based.py
+================================================================================
+
+Kya hai?
+  Length Based ki problem solve karta hai.
+  Splitting separators / meaningful boundaries pe hoti hai
+  (paragraph → line → word → character).
+
+Default separator priority:
+  Paragraph (\n\n) → Line (\n) → Word/Space (" ") → Character ("")
+
+Kaise kaam karta hai? (Recursive flow)
+  1) Pehle paragraph (\n\n) pe todta hai.
+  2) Check: paragraph chunk_size ke andar hai?
+       HAAN → further split nahi.
+       NAHI → next separator: line (\n)
+  3) Line bhi badi hai → words/space (" ") pe tod.
+  4) Word bhi bada hai → characters ("") pe tod.
+  5) Phir chhote pieces ko JOIN/MERGE karta hai
+     taaki final chunk chunk_size ke andar rahe.
+
+Isi split → check → further split → merge process ki wajah se
+ise RecursiveCharacterTextSplitter kehte hain.
+
+chunk_overlap:
+  Agar overlap=50, to next chunk me previous ke last 50 chars bhi aate hain.
+  Boundary pe context tootne ka chance kam hota hai.
+
+Kab use karein?
+  Plain English text / articles / normal docs.
+  Production me SABSE ZYADA yahi use hota hai.
+
+Video (CampusX):
+  https://youtu.be/SEWS9P4ODmc?t=1411
+
+
+================================================================================
+3) DOCUMENT STRUCTURE BASED (from_language)
+   File: document_structure_based.py
+================================================================================
+
+Kya hai?
+  Text Structure Based ka EXTENDED version.
+  Logic same hai (recursive), bas SEPARATORS document type ke hisaab se badalte hain.
+
+Text Structure Based kab kaafi?
+  Jab plain English ho — paragraph, line, word naturally present.
+
+Document Structure Based kab chahiye?
+  Jab plain English NA ho — jaise:
+    - Python / JS / Java code
+    - Markdown
+    - HTML / JSON etc.
+
+  Inme meaningful break points alag hote hain.
+  Example Python: class, def, blank lines, comments.
+
+Kaise use karein?
+  RecursiveCharacterTextSplitter.from_language(
+      language=Language.PYTHON,   # ya JS, MARKDOWN, HTML, JAVA...
+      chunk_size=300,
+      chunk_overlap=0,
+  )
+
+from_language() automatically us language ke sahi separators set kar deta hai.
+Goal: related code block (function/class) zyada meaningful tarike se ek chunk me rahe.
+
+
+================================================================================
+4) SEMANTIC MEANING BASED (SemanticChunker)
+   File: semantic_meaning_based.py
+================================================================================
+
+Kya hai?
+  Pehle ke 3 splitters SIZE ya STRUCTURE se todte hain.
+  Ye MEANING / TOPIC ke hisaab se todta hai.
+  Jab topic change hota hai → naya chunk.
+
+Kaise kaam karta hai?
+  1) Text ko sentences me todta hai.
+  2) Har sentence ka EMBEDDING banata hai (vector = meaning).
+  3) Consecutive sentences ke beech DISTANCE nikalta hai.
+       Distance chhoti → meaning similar → same chunk
+       Distance badi  → meaning change → BREAKPOINT → naya chunk
+  4) Threshold se decide hota hai kitna jump "bada" maana jaye.
+
+Important params:
+  embeddings                    → OpenAIEmbeddings() etc.
+  breakpoint_threshold_type     → "percentile" | "standard_deviation" |
+                                  "interquartile" | "gradient"
+  breakpoint_threshold_amount   → threshold kitna sensitive
+                                  (chhota = zyada splits, bada = kam splits)
+
+Example:
+  Farming + IPL + Terrorism ek hi text me mix ho → ideally alag chunks.
+  Reality: perfect topic boundary har baar guarantee nahi —
+  threshold / embeddings pe depend karta hai.
+
+Pros:
+  - Topic / meaning better preserve
+  - Mixed-topic text me cleaner chunks (RAG / search ke liye useful)
+
+Cons:
+  - Embeddings API chahiye → slow + costly
+  - Baaki splitters se zyada complex
+  - Threshold tuning zaroori
+  - Offline/no-API setup mushkil (agar OpenAI use kar rahe ho)
+
+Import note:
+  SemanticChunker langchain_text_splitters me NAHI hai.
+  Ye langchain_experimental me milta hai:
+    from langchain_experimental.text_splitter import SemanticChunker
+    pip install langchain-experimental
+  ye splitter itna accurate result nahi deta hai because it is in a experimental stage to iska use abhi bhut kam kia jata hai
+
+
+================================================================================
+split_text vs split_documents vs create_documents
+================================================================================
+
+split_text(text_string):
+  - Plain string (str) pass karo
+  - Return: list of strings (chunks)
+  - Example: text_structure_based.py, document_structure_based.py
+
+split_documents(docs):
+  - Document objects (loader se aaye) pass karo
+  - Return: list of Document objects
+  - Metadata (source, page, etc.) carry forward hoti hai
+  - Example: length_based.py (PyPDFLoader ke baad)
+
+create_documents([text]):
+  - SemanticChunker me commonly ye use hota hai
+  - Input: list of plain text strings
+  - Output: list of Document objects
+  - Example: semantic_meaning_based.py
+
+Document object me generally:
+  - page_content → chunk ka text
+  - metadata     → source / page / extra info
+
+
+================================================================================
+QUICK DECISION GUIDE
+================================================================================
+
+Plain English article / notes     → Text Structure Based (Recursive)
+Code / Markdown / HTML            → Document Structure Based (from_language)
+Sirf character count control      → Length Based (CharacterTextSplitter)
+Mixed topics, meaning-based cut   → Semantic Meaning Based (SemanticChunker)
+
+
+================================================================================
+FILES IN THIS FOLDER
+================================================================================
+
+length_based.py              → CharacterTextSplitter demo
+text_structure_based.py      → RecursiveCharacterTextSplitter demo
+document_structure_based.py  → from_language(Language.PYTHON) demo
+semantic_meaning_based.py    → SemanticChunker demo
+notes.txt                    → yehi notes
+pdf_file.pdf                 → sample PDF (length_based me use)

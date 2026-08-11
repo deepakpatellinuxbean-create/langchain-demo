@@ -1,46 +1,215 @@
-document loader:
-ye kisi bhi type ke document ko load krte hai.
-document loader hamesa list return karte hai and list ke andar document object hota hai jike andar file ka conrtent and metadata like page number etc details hoti hai.
+================================================================================
+DOCUMENT LOADERS — NOTES
+================================================================================
 
-1) TextLoader: text file ko load krta hai
-2) PyPDFLoader: pdf files ko load krta hai and har page ke liye ek alag document object banata hai for e.g yadi pdf file me 20 pages hai to loader.load() list return krega and is list ke andar 20 document objects honge each representing one single page. har ek document object me page_content and metadata hoga  
-limitations: ye srf normal pdf read krta hai jiske andar text ho yadi complex pdf hai jiske andar images ke screenshot hai yaa scanned pages hai to it can't read it can only read textual pdf.
-| Use Case                       | Recommended Loader                                   |
-| ------------------------------ | ---------------------------------------------------- |
-| Simple, clean PDFs             | `PyPDFLoader`                                        |
-| PDFs with tables/columns       | `PDFPlumberLoader`                                   |
-| Scanned/image PDFs             | `UnstructuredPDFLoader` or `AmazonTextractPDFLoader` |
-| Need layout and image data     | `PyMuPDFLoader`                                      |
-| Want best structure extraction | `UnstructuredPDFLoader`                              |
-These are PDF loaders commonly used to extract text and other information from PDF files, especially in document-processing or RAG applications.
+Document Loader kya hai?
+  Kisi bhi type ke document (txt, pdf, webpage, folder...) ko
+  LangChain ke Document format me load karna.
 
-PyPDFLoader → Best for simple, text-based PDFs. It extracts the text from each page with relatively little processing.
-PDFPlumberLoader → Better when the PDF contains tables, columns, or structured text. It is useful when preserving table/column information matters.
-UnstructuredPDFLoader → Designed for more complex PDFs, including documents containing images, scanned pages, tables, headings, and other structures. It generally provides better document structure extraction.
-AmazonTextractPDFLoader → Useful for scanned/image PDFs because it can use Amazon Textract's OCR capabilities to recognize text from images.
-PyMuPDFLoader → Useful when you need layout information and images in addition to ordinary text. PyMuPDF is also known for fast PDF processing.
+Loader hamesha kya return karta hai?
+  list of Document objects
 
-3) DirectoryLoader: yadi hume pure folder hi load karwana ho jiske andar multiple files hai to us case me DirectoryLoader use kia jata hai
-# yadi hume pure folder hi load karwana ho jiske andar multiple files hai to us case me DirectoryLoader use kia jata hai
-glob="*.pdf", #isme batana padta hai ki konsi files hum load krna chahta hai via passing a pattern current pattern says ki tum saari pdf file load kro jo ki pdf_files_directory ke andar hai we do have other patterns as well for e.g. "**/*.txt": Find every .txt file, including files inside all subfolders., "*.pdf": Find .pdf files only in the current/root directory, "data/*.csv": Find .csv files specifically inside the data/ folder, "**/*": Find every file of every type, including files in all subfolders
-docs = loader.load() # saari pdf ke saare pages docs me list me aa jayenge if teeno pdf ke total pages 15 honge to total 15 document object in a list load ho jayenge 
-
-docs = loader.load() ek sath multiple docs ko ek baar me load krta hai which consumes a lot of time and memory to is chiz se bachne ke liye hum DirectoryLoader me usually lazy_load() use krte hai instead load.
-
-lazy_load() :-> doesn't return a list of documents objects at once or process entire document at once instead it returms a generator. generator ki madad se hum 1 baar me srf 1 document object memory me load hota hai which saves time and memory both. 
+Har Document object me generally 2 cheezein hoti hain:
+  1) page_content → actual text content
+  2) metadata     → source, page number, URL, encoding, etc.
 
 
-## WebBaseLoader
+--------------------------------------------------------------------------------
+IS FOLDER ME 4 LOADERS
+--------------------------------------------------------------------------------
 
-**WebBaseLoader** is a document loader in LangChain used to load and extract text content from **web pages (URLs)**.
+1) TextLoader       → plain .txt file
+2) PyPDFLoader      → PDF file (1 page = 1 Document)
+3) DirectoryLoader  → poora folder (multiple files)
+4) WebBaseLoader    → webpage / URL
 
-It uses **BeautifulSoup** under the hood to parse HTML and extract visible text.
 
-### When to Use:
+================================================================================
+1) TEXT LOADER (TextLoader)
+   File: text_loader.py
+================================================================================
 
-* For **blogs, news articles, or public websites** where the content is primarily **text-based and static**.
+Kya hai?
+  Plain .txt files ko load karta hai.
+  Simple use: poem, notes, article text file.
 
-### Limitations:
+Important params:
+  file_path → kaunsi file load karni hai
+  encoding  → aksar "utf-8" (Windows pe safe)
 
-* Doesn’t handle **JavaScript-heavy pages** well (use `SeleniumURLLoader` for that).
-* Loads only **static content** — what's in the HTML, not what loads after the page renders.
+Return:
+  Usually 1 file = 1 Document object
+  docs[0].page_content → file ka text
+  docs[0].metadata     → source path etc.
+
+Demo flow (text_loader.py):
+  TextLoader se poem load → PromptTemplate → ChatOpenAI → summary
+
+
+================================================================================
+2) PDF LOADER (PyPDFLoader)
+   File: pyPDF_loader.py
+================================================================================
+
+Kya hai?
+  PDF file ko load karta hai.
+  HAR PAGE ke liye ALAG Document object banata hai.
+
+Example:
+  PDF me 20 pages → loader.load() → list me 20 Document objects
+  docs[0] = page 1, docs[1] = page 2, ...
+
+Har Document me:
+  page_content → us page ka text
+  metadata     → source path, page number, etc.
+
+Limitation:
+  Sirf TEXT-based / normal PDFs padhta hai.
+  Scanned pages, image screenshots, OCR content → sahi nahi padhega.
+
+
+--------------------------------------------------------------------------------
+Kab kaunsa PDF loader? (quick guide)
+--------------------------------------------------------------------------------
+
+Use Case                          Recommended Loader
+--------------------------------  ----------------------------------------------
+Simple, clean text PDF            PyPDFLoader
+Tables / columns                  PDFPlumberLoader
+Scanned / image PDF               UnstructuredPDFLoader / AmazonTextractPDFLoader
+Layout + images bhi chahiye       PyMuPDFLoader
+Best structure extraction         UnstructuredPDFLoader
+
+Short explanation:
+  PyPDFLoader           → simple text PDFs, light processing
+  PDFPlumberLoader      → tables/columns preserve karne me better
+  UnstructuredPDFLoader → complex PDFs (images, scanned, headings, structure)
+  AmazonTextractPDFLoader → scanned/image PDFs (OCR via AWS Textract)
+  PyMuPDFLoader         → text + layout/images, generally fast
+
+
+================================================================================
+3) DIRECTORY LOADER (DirectoryLoader)
+   File: directory_loader.py
+================================================================================
+
+Kab use karein?
+  Jab ek poora FOLDER load karna ho jisme multiple files hon.
+  Example: pdf_files_directory me kai PDFs → saari load.
+
+Important params:
+  path       → kaunsa folder
+  glob       → kaunsi files (pattern dena padta hai usually)
+  loader_cls → har file ke liye kaunsa loader
+               (PDFs ke liye PyPDFLoader)
+
+Common glob patterns:
+  "*.pdf"      → current folder me sirf .pdf
+  "**/*.txt"   → saari subfolders me .txt
+  "data/*.csv" → sirf data/ folder me .csv
+  "**/*"       → har type ki har file (all subfolders)
+
+PyPDFLoader ke saath note:
+  Har PDF page = 1 Document
+  Example: 3 PDFs, total 15 pages → total 15 Documents
+
+
+--------------------------------------------------------------------------------
+load() vs lazy_load() — IMPORTANT
+--------------------------------------------------------------------------------
+
+load():
+  - Saari files/pages ek sath memory me list banata hai
+  - Return: list of Document objects
+  - Zyada files → slow + memory heavy
+
+lazy_load():
+  - Generator return karta hai
+  - Ek baar me 1 Document yield
+  - Memory + time dono bachate hain
+  - DirectoryLoader me usually yahi prefer karo
+  - Jab agla document load hota hai memory me to previous document memory se remove kr dia jata hai
+
+Important:
+  Generator pe indexing (docs[4]) NAHI chalti.
+  Indexing chahiye to:
+    docs = list(loader.lazy_load()) # (yaad rahe: list() karne se saara data memory me aa jata hai)
+  Ya pure lazy style:
+    for doc in loader.lazy_load():
+        print(doc.page_content)
+
+
+================================================================================
+4) WEB BASE LOADER (WebBaseLoader)
+   File: webbase_loader.py
+================================================================================
+
+Kya hai?
+  Web page (URL) se text content load karta hai.
+  Under the hood BeautifulSoup HTML parse karke visible text nikalta hai.
+
+Kab use karein?
+  Blogs, news articles, public websites —
+  jahan content mainly TEXT-based aur STATIC ho.
+
+Limitations:
+  - JavaScript-heavy pages sahi nahi load hoti
+    (dynamic content ke liye SeleniumURLLoader better)
+  - Sirf static HTML content aata hai
+    (page render ke baad JS se aane wala data miss ho sakta hai)
+
+Multiple URLs:
+  Ek URL string ya URLs ki list dono pass kar sakte ho.
+  Example:
+    loader = WebBaseLoader(url)
+    loader = WebBaseLoader([url1, url2])
+
+Return:
+  list of Document objects
+  Usually 1 URL = 1 Document
+  docs[0].page_content → extracted text
+  docs[0].metadata     → source URL etc.
+
+Demo flow (webbase_loader.py):
+  URL load → page text → Prompt + question → ChatOpenAI → answer
+
+
+================================================================================
+QUICK DECISION GUIDE
+================================================================================
+
+Plain .txt file                 → TextLoader
+Single text PDF                 → PyPDFLoader
+Tables/columns PDF              → PDFPlumberLoader
+Scanned/image PDF               → Unstructured / Textract
+Poora folder (multiple files)   → DirectoryLoader (+ sahi loader_cls)
+Webpage / blog / article URL    → WebBaseLoader
+JS-heavy dynamic webpage        → SeleniumURLLoader
+
+
+================================================================================
+COMMON PATTERN (almost sab loaders me)
+================================================================================
+
+loader = SomeLoader(...)
+docs = loader.load()          # list of Documents
+
+docs[0].page_content          # text
+docs[0].metadata              # source / page / url etc.
+
+Phir next steps usually:
+  Text Splitting → Embeddings → Vector Store → RAG / QA
+
+
+================================================================================
+FILES IN THIS FOLDER
+================================================================================
+
+text_loader.py           → TextLoader + LLM summary demo
+pyPDF_loader.py          → PyPDFLoader demo
+directory_loader.py      → DirectoryLoader + lazy_load demo
+webbase_loader.py        → WebBaseLoader + QA demo
+Notes.txt                → yehi notes
+text_file.txt            → sample text (TextLoader)
+pdf_file.pdf             → sample PDF (PyPDFLoader)
+pdf_files_directory/     → sample PDFs (DirectoryLoader)
