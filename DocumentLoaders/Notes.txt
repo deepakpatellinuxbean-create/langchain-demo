@@ -15,13 +15,14 @@ Har Document object me generally 2 cheezein hoti hain:
 
 
 --------------------------------------------------------------------------------
-IS FOLDER ME 4 LOADERS
+IS FOLDER ME 5 LOADERS
 --------------------------------------------------------------------------------
 
 1) TextLoader       → plain .txt file
 2) PyPDFLoader      → PDF file (1 page = 1 Document)
 3) DirectoryLoader  → poora folder (multiple files)
 4) WebBaseLoader    → webpage / URL
+5) CSVLoader        → CSV file (1 row = 1 Document)
 
 
 ================================================================================
@@ -175,6 +176,44 @@ Demo flow (webbase_loader.py):
 
 
 ================================================================================
+5) CSV LOADER (CSVLoader)
+   File: csv_loader_5.py
+================================================================================
+
+Kya hai?
+  CSV file ko load karke LangChain Document objects banata hai.
+
+Important rule:
+  HAR ROW = ALAG Document object
+
+Example:
+  CSV me 100 data rows → loader.load() → 100 Documents
+
+Har Document me:
+  page_content → us row ke columns "key: value" form me (har column nayi line pe)
+  metadata     → usually {"source": file_path, "row": row_index}
+
+page_content example (ek row):
+  name: Aarav
+  city: Delhi
+  age: 22
+  role: Student
+
+Useful optional params:
+  source_column    → metadata["source"] me file path ki jagah kisi column ki value
+  metadata_columns → kuch columns page_content me nahi, metadata me daal do
+  content_columns  → page_content me sirf selected columns
+  encoding         → file encoding (jaise "utf-8")
+
+Kab use karein?
+  Tabular data (employees, products, FAQs, records) ko
+  RAG / search / LLM ke liye Documents me convert karna ho.
+
+Sample file:
+  csv_file.csv
+
+
+================================================================================
 QUICK DECISION GUIDE
 ================================================================================
 
@@ -185,6 +224,7 @@ Scanned/image PDF               → Unstructured / Textract
 Poora folder (multiple files)   → DirectoryLoader (+ sahi loader_cls)
 Webpage / blog / article URL    → WebBaseLoader
 JS-heavy dynamic webpage        → SeleniumURLLoader
+CSV / tabular rows              → CSVLoader
 
 
 ================================================================================
@@ -195,7 +235,7 @@ loader = SomeLoader(...)
 docs = loader.load()          # list of Documents
 
 docs[0].page_content          # text
-docs[0].metadata              # source / page / url etc.
+docs[0].metadata              # source / page / url / row etc.
 
 Phir next steps usually:
   Text Splitting → Embeddings → Vector Store → RAG / QA
@@ -205,11 +245,13 @@ Phir next steps usually:
 FILES IN THIS FOLDER
 ================================================================================
 
-text_loader.py           → TextLoader + LLM summary demo
-pyPDF_loader.py          → PyPDFLoader demo
-directory_loader.py      → DirectoryLoader + lazy_load demo
-webbase_loader.py        → WebBaseLoader + QA demo
+text_loader_1.py         → TextLoader + LLM summary demo
+pyPDF_loader_2.py        → PyPDFLoader demo
+directory_loader_3.py    → DirectoryLoader + lazy_load demo
+webbase_loader_4.py      → WebBaseLoader + QA demo
+csv_loader_5.py          → CSVLoader demo
 Notes.txt                → yehi notes
 text_file.txt            → sample text (TextLoader)
 pdf_file.pdf             → sample PDF (PyPDFLoader)
 pdf_files_directory/     → sample PDFs (DirectoryLoader)
+csv_file.csv             → sample CSV (CSVLoader)

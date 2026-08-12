@@ -4,24 +4,24 @@
 #
 # Ye Length Based splitter ki problem solve karta hai.
 #
-# Length Based me kya problem thi?
-#   Text KAHI SE BHI break ho jata tha (even word ke beech se).
-#   Context / meaning preserve nahi hoti thi.
+# Length Based (CharacterTextSplitter) me kya limitation thi?
+#   1) separator=""  → hard cut: word ke beech se bhi toot sakta hai
+#                      (context/meaning kharab).
+#   2) separator="\n" → break sirf newline pe; words intact rehte hain,
+#                      LEKIN agar ek line khud chunk_size se badi ho
+#                      to further split NAHI hota → chunk size exceed
+#                      ho sakta hai (warning aati hai).
+
 #
 # Text Structure Based me kya alag hai?
-#   Yahan splitting separators ke hisaab se hoti hai —
-#   matlab pehle meaningful boundaries (paragraph, line, word) try karta hai.
-#   Isse sentence / paragraph ka sense zyada better rehta hai.
-#
-# Default separator priority (sabse pehle → sabse last):
-#   Paragraph (\n\n) → Line (\n) → Word/Space (" ") → Character ("")
+#   Yahan splitting separators ke hisaab se hoti hai — matlab pehle meaningful boundaries (paragraph, line, word) try karta hai. Isse sentence / paragraph ka sense zyada better rehta hai. default separator priority (sabse pehle → sabse last): Paragraph (\n\n) → Line (\n) → Word/Space (" ") → Character ("")
 #
 # Ye production me SABSE ZYADA use hone wala splitter hai.
 # =============================================================================
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-# Sample plain text (2 paragraphs — beech me blank line = \n\n)
+# Sample plain text
 text = """
 Space exploration has led to incredible scientific discoveries. From landing on the Moon to
 exploring Mars, humanity continues to push the boundaries of what's possible beyond our

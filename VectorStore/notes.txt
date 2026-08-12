@@ -1,0 +1,63 @@
+
+A vector store is a system designed to store and retrieve data represented as numerical vectors.
+
+### Key Features
+
+1. **Storage** – Ensures that vectors and their associated metadata are retained, whether **in-memory** (RAM) for quick lookups or **on-disk** (ROM) for durability and large-scale use.
+
+2. **Similarity Search** – Helps retrieve the vectors most similar to a query vector.
+
+3. **Indexing** – Provide a data structure or method that enables fast similarity searches on **high-dimensional vectors** (e.g., **approximate nearest neighbor lookups**).
+
+4. **CRUD Operations** – Manage the lifecycle of data—**adding new vectors, reading them, updating existing entries, removing outdated vectors**.
+
+### Use-cases
+
+1. Semantic Search
+2. RAG
+3. Recommender Systems
+4. Image/Multimedia Search
+
+
+
+
+## Vector Store vs Vector Database
+
+### Vector Store
+
+* Typically refers to a **lightweight library or service** that focuses on storing vectors (**embeddings**) and performing **similarity search**.
+* May not include many traditional database features like **transactions, rich query languages, or role-based access control**.
+* Ideal for **prototyping and smaller-scale applications**.
+* **Example:** FAISS — stores vectors and allows similarity-based queries, but persistence and scaling need to be handled separately.
+
+### Vector Database
+
+* A **full-fledged database system** designed to store and query vectors.
+* Offers additional **database-like features**, such as:
+* Distributed architecture for **horizontal scaling**
+  * **Durability and persistence** (replication, backup/restore)
+  * **Metadata handling** (schemas, filters)
+  * Potential for **ACID or near-ACID guarantees**
+  * **Authentication/authorization** and more advanced security
+* Geared toward **production environments** with significant scaling and large datasets.
+
+A vector database is effectively a vector store with extra database features (e.g.,
+clustering, scaling, security, metadata filtering, and durability)
+
+
+
+
+
+
+## Vector Stores in LangChain
+
+**1. Supported Stores:**
+LangChain integrates with multiple vector stores such as **FAISS, Pinecone, Chroma, Qdrant, Weaviate**, etc., giving you flexibility in terms of **scale, features, and deployment**.
+
+**2. Common Interface:**
+LangChain provides a **uniform Vector Store API**, allowing you to swap one backend (e.g., **FAISS**) for another (e.g., **Pinecone**) with **minimal code changes**.
+
+**3. Metadata Handling:**
+Most vector stores integrated with LangChain allow you to attach **metadata** (e.g., timestamps, authors, document type) to each document, enabling **filter-based retrieval**.
+
+**In short:** LangChain acts as a common layer between your application and different vector stores, making it easier to **store, search, filter, and switch between vector databases/stores**.

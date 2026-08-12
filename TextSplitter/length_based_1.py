@@ -7,53 +7,70 @@
 #   Reason: LLM ki context length limited hoti hai — pura doc ek sath nahi bhej sakte. if we give the entire document to the LLM, it will not be able to process it properly.
 #
 # Length Based splitting kya hai?
-#   Isme hum CHUNK SIZE (max characters in one chunk) aur SEPARATOR ke hisaab se split karte hain.
-#   Yadi splitter me separator mention hai to separator ko preference deke hi cut kia jata hai text na ki chunk size ke hisab se.
-#   Example: chunk_size=100 → har chunk me ~100 characters hona chaiye.
-#   Splitter text ko utne characters ke hisaab se tod deta hai.
+#   Isme 2 cheezein matter karti hain:
+#     1) chunk_size  → ek chunk me max kitne characters
+#     2) separator   → text kis jagah todna hai
 #
-# Problem / Limitations (IMPORTANT):
-#   1. separator="" (empty string) par: Srf number of character ke basis pr chunk ko break kr dia jata hai ho skta hai word bich me se break ho jaaye 
-# For e.g. if the chunk_size is 4 and separator="" and text is "beautiful"
-# after splitting it will become "beau", "tifu", "l"
-#      - Problem: Context preserve nahi hota, hard cut hota hai (e.g., "beau" | "tiful").
-#      - Problem: LLM can't it since the context isn't preserved
-
-#   2. separator="\n" (ya koi custom string) par:
-#      - Hum separator="\n" me \n mention karte hai to hmara splitter \n k basis pr text ko split karta hai. then splitted chunk ko merge karne ke kosis krta hai yadi merge krne pr chunk_size se chota hota hai to merge krta hai otherwise merge nahi karta or text ko 2 ala alag chunk ki tarah treat kia jata hai.
-e.g. 
-Line A: "Hello World"  (11 chars) \n
-Line B: "LangChain"    (9 chars)  \n
-Line C: "Python"       (6 chars)
-
-Execution Step-by-Step:
-
-Chunk 1 Process:
-
-Line A (11 chars) -> Length = 11.
-
-Line B (9 chars) check karo: 11 + 1 + 9 = 21.
-
-21 <= 25 (chunk_size), toh Line B add ho jayegi! -> Total length = 21.
-
-Agli Line C (6 chars) check karo: 21 + 1 + 6 = 28.
-
-28 > 25, toh Line C add nahi ho sakti.
-
-Chunk 1 Result: "Hello World\nLangChain" (21 chars)
-
-Chunk 2 Process:
-
-Line C se shuru hua.
-
-Chunk 2 Result: "Python" (6 chars)
-
-# 
-#      - CRITICAL EDGE CASE: agar separator \n hai and splitter jab \n k basis pr split karta hai text and in case text chunk size se bada ho jata hai to splitter usse further split nahi karta instead usse ussi size ka rhne deta hai bus ek warning dikhata hai ki splitted text chunk_size se bada hai.
-
+#   IMPORTANT rule:
+#     Agar separator diya hai (jaise "\n"), to pehle separator ke hisaab
+#     se split hota hai, phir chunks ko merge karke chunk_size ke andar
+#     laane ki koshish hoti hai.
+#     Agar separator="" (empty) hai, to seedha character-count (chunk_size) ke basis pr text ko hard cut krta hai.
 #
+#
+# -----------------------------------------------------------------------------
+# CASE 1: separator=""  (empty string)
+# -----------------------------------------------------------------------------
+#   Sirf chunk_size (characters) ke basis pe text break hota hai.
+#   Word ke beech se bhi kat sakta hai → context toot jata hai.
+#
+#   Example:
+#     text = "beautiful"
+#     chunk_size = 4
+#     separator = ""
+#
+#   Result chunks:
+#     "beau" | "tifu" | "l"
+#
+#   Problem:
+#     Word sense kharab → LLM ko samajhna mushkil.
+#
+#
+# -----------------------------------------------------------------------------
+# CASE 2: separator="\n"  (ya koi custom string)
+# -----------------------------------------------------------------------------
+#   Flow:
+#     1) Pehle text ko separator (\n) pe tod do → alag lines milengi
+#     2) Phir un lines ko merge karo jab tak chunk_size allow kare
+#     3) Agar next line add karne se size badh jaye to merge mat perform kro instead → naya chunk start kr do
+#
+#   Example (chunk_size = 25):
+#     Line A: "Hello World"  (11 chars)
+#     Line B: "LangChain"    (9 chars)
+#     Line C: "Python"       (6 chars)
+#
+#   Step-by-step:
+#     Chunk 1:
+#       Line A le lo → length = 11
+#       Line B add?  11 + 1 + 9 = 21  → 21 <= 25 → HAAN, add
+#       Line C add?  21 + 1 + 6 = 28  → 28 > 25  → NAHI
+#       Chunk 1 = "Hello World\nLangChain" (21 chars)
+#
+#     Chunk 2:
+#       Line C se start → "Python" (6 chars)
+#
+#   Final:
+#     Chunk 1 → "Hello World\nLangChain"
+#     Chunk 2 → "Python"
+#
+#
+# -----------------------------------------------------------------------------
+# CRITICAL EDGE CASE (separator wale mode me)
+# -----------------------------------------------------------------------------
+#   Agar separator="\n" hai and separator pe todne ke baad KOI EK piece khud chunk_size se bada ho, to CharacterTextSplitter usse FURTHER split NAHI karta instead usse ussi size ka rhne deta hai bus ek warning dikhata hai ki splitted text chunk_size se bada hai.
+
 # Kab use karein?
-#   Simple demos, exact character-size control chahiye, ya text structure matter nahi karti.
+#   Simple demos, exact character-size control, ya structure matter nahi.
 # =============================================================================
 
 from langchain_text_splitters import CharacterTextSplitter
@@ -78,7 +95,7 @@ docs = loader.load()
 #                   "" (empty) = characters ke hisaab se tod do (hard cut).
 #                   Agar separator="\n" diya to pehle newline par todne ki koshish karega.
 splitter = CharacterTextSplitter(
-    chunk_size=100,      # har chunk ~100 characters
+    chunk_size=100,      # har chunk max ~100 characters
     chunk_overlap=0,     # chunks ke beech overlap nahi
     separator=""         # empty → pure character-count based cut
 )
@@ -95,13 +112,13 @@ splitter = CharacterTextSplitter(
 #       → har chunk ek alag Document ban jata hai
 #       → metadata bhi carry forward hota hai (source, page, etc.)
 #
-# Yahan docs Document objects hain, isliye split_documents use kiya. agar text hota to split_text use kiya jata.
+# Yahan docs Document objects hain → split_documents use kiya.
 result = splitter.split_documents(docs)
 
 # result kya hoga?
 #   Agar text se ~10 chunks bane → result me 10 Document objects.
 #   Har Document:
-#     - page_content → us chunk ka text (max ~100 chars)
+#     - page_content → us chunk ka text (max ~100 chars honge since separator="" hai)
 #     - metadata     → original PDF ki info (jaise page number)
 #
 # Example check karne ke liye:
